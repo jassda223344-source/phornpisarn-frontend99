@@ -1,96 +1,65 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>พรพิศาล ค้าส่ง | ระบบบัญชี</title>
-<script src="https://cdn.tailwindcss.com"></script>
-</head>
+<div id="bill" class="page">
+  <h2 class="text-xl font-bold mb-4">📄 ใบวางบิล</h2>
 
-<body class="bg-slate-100">
-
-<!-- LOGIN -->
-<div id="loginPage" class="min-h-screen flex items-center justify-center">
-  <div class="bg-white p-6 rounded-xl shadow w-80">
-    <h2 class="text-xl font-bold text-center mb-4">🔐 เข้าสู่ระบบ</h2>
-    <input id="username" placeholder="Username"
+  <!-- FORM -->
+  <div class="bg-white p-4 rounded-xl shadow mb-4 max-w-md">
+    <input id="company" placeholder="ชื่อบริษัท"
       class="w-full border p-2 mb-2 rounded">
-    <input id="password" type="password" placeholder="Password"
-      class="w-full border p-2 mb-4 rounded">
-    <button onclick="login()"
+
+    <input id="amount" type="number" placeholder="ยอดเงิน"
+      class="w-full border p-2 mb-2 rounded">
+
+    <input id="datetime" type="datetime-local"
+      class="w-full border p-2 mb-2 rounded">
+
+    <input id="image" type="file" accept="image/*"
+      class="w-full border p-2 mb-2 rounded">
+
+    <button onclick="saveBill()"
       class="w-full bg-indigo-600 text-white py-2 rounded">
-      เข้าสู่ระบบ
+      ➕ บันทึกใบวางบิล
     </button>
   </div>
+
+  <!-- LIST -->
+  <div id="billList"></div>
 </div>
+function saveBill(){
+  const fd = new FormData();
+  fd.append('company', company.value);
+  fd.append('amount', amount.value);
+  fd.append('datetime', datetime.value);
+  fd.append('recorder', 'JOY2');
+  fd.append('image', image.files[0]);
 
-<!-- DASHBOARD -->
-<div id="app" class="hidden min-h-screen flex">
-
-  <!-- SIDEBAR -->
-  <div class="w-56 bg-indigo-700 text-white p-4">
-    <h3 class="font-bold mb-4">📊 พรพิศาล ค้าส่ง</h3>
-    <button onclick="showPage('bill')" class="block w-full text-left py-2">📄 ใบวางบิล</button>
-    <button onclick="showPage('income')" class="block w-full text-left py-2">💰 รายรับ</button>
-    <button onclick="showPage('expense')" class="block w-full text-left py-2">💸 รายจ่าย</button>
-    <button onclick="logout()" class="block w-full text-left py-2 text-red-300">🚪 ออกจากระบบ</button>
-  </div>
-
-  <!-- CONTENT -->
-  <div class="flex-1 p-4">
-    <div id="bill" class="page">
-      <h2 class="text-xl font-bold mb-2">📄 ใบวางบิล</h2>
-      <p> (ขั้นถัดไปเราจะใส่ฟอร์มบิลตรงนี้)</p>
-    </div>
-
-    <div id="income" class="page hidden">
-      <h2 class="text-xl font-bold mb-2">💰 รายรับ</h2>
-    </div>
-
-    <div id="expense" class="page hidden">
-      <h2 class="text-xl font-bold mb-2">💸 รายจ่าย</h2>
-    </div>
-  </div>
-</div>
-
-<script>
-const BACKEND_URL = 'https://phornpisarn-backend99.onrender.com'; // 👈 เปลี่ยนตรงนี้
-
-function login(){
-  fetch(BACKEND_URL + '/login', {
+  fetch(BACKEND_URL + '/bill',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      username: username.value,
-      password: password.value
-    })
+    headers:{
+      Authorization: localStorage.getItem('token')
+    },
+    body: fd
   })
-  .then(res=>{
-    if(!res.ok) throw 0;
-    return res.json();
+  .then(()=>loadBills());
+}
+
+function loadBills(){
+  fetch(BACKEND_URL + '/bill',{
+    headers:{
+      Authorization: localStorage.getItem('token')
+    }
   })
+  .then(r=>r.json())
   .then(data=>{
-    localStorage.setItem('token', data.token);
-    location.reload();
-  })
-  .catch(()=>alert('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'));
+    billList.innerHTML = data.map(b=>`
+      <div class="bg-white p-3 rounded shadow mb-2">
+        <div class="font-bold">${b.company}</div>
+        <div>💰 ${b.amount}</div>
+        <div>🕒 ${b.datetime}</div>
+        <div>📌 สถานะ: ${b.status}</div>
+        ${b.image ? `<img src="${BACKEND_URL}/${b.image}" class="w-32 mt-2 rounded">` : ''}
+      </div>
+    `).join('');
+  });
 }
 
-function logout(){
-  localStorage.removeItem('token');
-  location.reload();
-}
-
-function showPage(id){
-  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
-  document.getElementById(id).classList.remove('hidden');
-}
-
-if(localStorage.getItem('token')){
-  document.getElementById('loginPage').classList.add('hidden');
-  document.getElementById('app').classList.remove('hidden');
-}
-</script>
-
-</body>
-</html>
+loadBills();
